@@ -1,0 +1,87 @@
+<?php
+
+/**
+ * @file
+ * Allows hiding of the node title field and automatic title creation.
+ */
+
+use Drupal\Core\Entity\ContentEntityInterface;
+use Drupal\Core\Entity\EntityInterface;
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\node\NodeTypeInterface;
+
+use Drupal\d8_example_hide_title\D8ExampleHideTitle;
+
+/**
+ * Implements hook_ENTITY_TYPE_presave().
+ */
+function d8_example_hide_title_node_presave(EntityInterface $entity) {
+  // Just for new node content.
+  if (!($entity instanceof ContentEntityInterface) || !$entity->isNew()) {
+    return;
+  }
+  
+  D8ExampleHideTitle::autoTitle($entity);
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ *
+ * Adds hide title options to the node type form.
+ *
+ * @see NodeTypeForm::form().
+ * @see d8_example_hide_title_form_node_type_form_submit().
+ */
+function d8_example_hide_title_form_node_type_form_alter(&$form, FormStateInterface $form_state) {
+  /** @var \Drupal\node\NodeTypeInterface $type */
+  $typeEntity = $form_state->getFormObject()->getEntity();
+  $type = $typeEntity->id();
+  $tokenTypes = array('node');
+
+  $form['d8_example_hide_title'] = array(
+    '#type' => 'details',
+    '#title' => t('Hide title settings'),
+    '#group' => 'additional_settings',
+  );
+
+  $form['d8_example_hide_title']['d8_example_hide_title_pattern'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Pattern for the title'),
+    '#description' => t('Leave blank for using the per default generated title. Otherwise this string will be used as title. Use the syntax [token] if you want to insert a replacement pattern.'),
+    '#default_value' => $typeEntity->getThirdPartySetting('d8_example_hide_title', 'd8_example_hide_title_pattern', ''),
+    '#size' => 65,
+    '#maxlength' => 1280,
+    '#element_validate' => array('token_element_validate'),
+    '#after_build' => array('token_element_validate'),
+    '#token_types' => $tokenTypes,
+    '#min_tokens' => 1,
+  );
+
+  $form['d8_example_hide_title']['token_help'] = array(
+    '#theme' => 'token_tree_link',
+    '#token_types' => $tokenTypes,
+  );
+
+  $form['d8_example_hide_title']['d8_example_hide_title_status'] = array(
+    '#access' => !D8ExampleHideTitle::isTitleHidden($type),
+    '#type' => 'checkbox',
+    '#title' => t('Sets title component to be hidden.'),
+    '#description' => t('Sets title component to be hidden which on form display settings page.'),
+  );
+
+  $form['#entity_builders'][] = 'd8_example_hide_title_form_node_type_form_builder';
+}
+
+/**
+ * Entity builder for the node type form with hide title.
+ *
+ * @see d8_example_hide_title_form_node_type_form_alter().
+ */
+function d8_example_hide_title_form_node_type_form_builder($entity_type, NodeTypeInterface $type, &$form, FormStateInterface $form_state) {
+  /** @var \Drupal\node\NodeTypeInterface $type */
+  $type->setThirdPartySetting('d8_example_hide_title', 'd8_example_hide_title_pattern', $form_state->getValue('d8_example_hide_title_pattern'));
+
+  if ($form_state->getValue('d8_example_hide_title_status')) {
+    D8ExampleHideTitle::hiddenTitle($type->id());
+  }
+}

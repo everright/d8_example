@@ -1,0 +1,8 @@
+name: D8 Example - Hide Title
+description: Example of hiding node title field and automatic title creation.
+core: 8.x
+type: module
+package: D8 Example
+
+dependencies:
+- token
