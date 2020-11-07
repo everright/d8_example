@@ -5,3 +5,4 @@ D8 Example
 - Add test info.
 - Add hugo info.
 - Add king info.
+- Add solar info.
